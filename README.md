@@ -2,7 +2,6 @@
 
 Export and import OpenClaw/Clawdbot AI agents with full context.
 
-[![npm version](https://img.shields.io/npm/v/openclaw-porter)](https://www.npmjs.com/package/openclaw-porter)
 [![Tests](https://github.com/Purple-Horizons/openclaw-porter/actions/workflows/test.yml/badge.svg)](https://github.com/Purple-Horizons/openclaw-porter/actions)
 
 ## The Problem
@@ -30,8 +29,20 @@ openclaw-porter import github:user/openclaw-agent-aria@v1.0.0
 
 ## Installation
 
+**npm package coming soon:**
+
 ```bash
-npm install -g openclaw-porter
+npm install -g @purple-horizons/openclaw-porter
+```
+
+**Until then, install from source:**
+
+```bash
+git clone https://github.com/Purple-Horizons/openclaw-porter
+cd openclaw-porter
+npm install
+npm run build
+npm link  # Makes 'openclaw-porter' available globally
 ```
 
 ## Quick Start
@@ -164,6 +175,7 @@ Example: `openclaw-agent-aria`, `openclaw-agent-research-assistant`
 - [x] Manifest validation
 - [x] Secret detection
 - [x] USER.md.template generation
+- [ ] npm publish
 - [ ] GitHub integration (`github:user/repo` syntax)
 - [ ] Version pinning (`@v1.2.0`)
 - [ ] ClawdHub integration
@@ -181,4 +193,4 @@ npm test
 
 ## License
 
-MIT © [Gianni Dalerta](https://github.com/giannidalerta)
+MIT © [Purple Horizons](https://purplehorizons.io)
