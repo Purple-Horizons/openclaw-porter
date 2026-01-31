@@ -1,5 +1,5 @@
 /**
- * import command - install an agent from a package
+ * import command - install an agent from a package or GitHub
  */
 
 import path from 'path';
@@ -8,25 +8,17 @@ import { importAgent, parseSource } from '../lib/importer.js';
 import type { ImportOptions } from '../types.js';
 
 export async function importCommand(source: string, options: ImportOptions = {}): Promise<void> {
-  console.log(chalk.blue(`\n📥 Importing agent from ${source}\n`));
-
-  // Parse source
   const parsed = parseSource(source);
 
   if (parsed.type === 'github') {
-    console.log(chalk.yellow('⚠️  GitHub import not yet implemented'));
-    console.log(chalk.gray('   For now, clone the repo manually and import from local path'));
-    console.log(chalk.gray(`   git clone https://github.com/${parsed.path}`));
-    console.log(chalk.gray(`   openclaw-porter import ./${path.basename(parsed.path)}`));
-    return;
-  }
-
-  if (parsed.type === 'clawdhub') {
+    console.log(chalk.blue(`\n📥 Importing agent from GitHub: ${parsed.path}${parsed.version ? `@${parsed.version}` : ''}\n`));
+  } else if (parsed.type === 'clawdhub') {
     console.log(chalk.yellow('⚠️  ClawdHub import not yet implemented'));
     return;
+  } else {
+    console.log(chalk.blue(`\n📥 Importing agent from ${source}\n`));
   }
 
-  // Local import
   const result = await importAgent(source, options);
 
   if (!result.success) {

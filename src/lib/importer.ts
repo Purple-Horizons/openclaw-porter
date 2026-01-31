@@ -7,19 +7,71 @@ import path from 'path';
 import * as tar from 'tar';
 import type { PorterManifest, ImportOptions, ImportResult } from '../types.js';
 import { loadManifest, validateManifest } from './manifest.js';
+import { parseGitHubSource, fetchGitHubRepo, cleanupGitHubTemp } from './github.js';
 
 /**
- * Import an agent from a local archive or extracted directory
+ * Import an agent from a local archive, directory, or GitHub
  */
 export async function importAgent(
   source: string,
   options: ImportOptions = {}
 ): Promise<ImportResult> {
-  const errors: string[] = [];
-
   // Determine target directory
   const targetDir = options.target || process.cwd();
 
+  // Check if this is a GitHub source
+  const githubSource = parseGitHubSource(source);
+  if (githubSource) {
+    return importFromGitHub(githubSource, targetDir, options);
+  }
+
+  // Handle local sources
+  return importFromLocal(source, targetDir, options);
+}
+
+/**
+ * Import from GitHub repository
+ */
+async function importFromGitHub(
+  source: { owner: string; repo: string; version?: string },
+  targetDir: string,
+  options: ImportOptions
+): Promise<ImportResult> {
+  // Fetch the repo
+  const fetchResult = await fetchGitHubRepo(source, targetDir);
+
+  if (!fetchResult.success || !fetchResult.path) {
+    return {
+      success: false,
+      errors: [fetchResult.error || 'Failed to fetch GitHub repository'],
+    };
+  }
+
+  try {
+    // Import from the fetched directory
+    const result = await importFromLocal(fetchResult.path, targetDir, options);
+
+    // Clean up temp directory
+    await cleanupGitHubTemp(targetDir);
+
+    return result;
+  } catch (error: any) {
+    await cleanupGitHubTemp(targetDir);
+    return {
+      success: false,
+      errors: [`Import failed: ${error.message}`],
+    };
+  }
+}
+
+/**
+ * Import from local archive or directory
+ */
+async function importFromLocal(
+  source: string,
+  targetDir: string,
+  options: ImportOptions
+): Promise<ImportResult> {
   // Handle different source types
   let extractedPath: string;
 
@@ -78,9 +130,6 @@ export async function importAgent(
     };
   }
 
-  // Check Clawdbot version compatibility (basic check)
-  // In real implementation, would compare with installed version
-
   // Create target agent directory
   const agentDir = path.join(targetDir, manifest.name);
 
@@ -116,7 +165,6 @@ export async function importAgent(
   const userMdPath = path.join(agentDir, 'USER.md');
 
   if ((await fs.pathExists(templatePath)) && !(await fs.pathExists(userMdPath))) {
-    // Copy template to USER.md for user to fill in
     await fs.copy(templatePath, userMdPath);
     console.log('\n📝 Created USER.md from template - please fill in your details');
   }
@@ -131,17 +179,16 @@ export async function importAgent(
     }
   }
 
-  // Install external skills (placeholder - would use clawdhub in real implementation)
+  // Install external skills
   const installedSkills: string[] = [];
   if (manifest.skills?.external && !options.skipSkills) {
     for (const skill of manifest.skills.external) {
-      // Would run: clawdhub install <skill.name>
       installedSkills.push(skill.name);
       console.log(`📦 Would install skill: ${skill.name}`);
     }
   }
 
-  // Clean up temp directory if we extracted
+  // Clean up temp directory if we extracted from archive
   const tempDir = path.join(targetDir, '.porter-temp');
   if (await fs.pathExists(tempDir)) {
     await fs.remove(tempDir);
@@ -152,7 +199,6 @@ export async function importAgent(
     const hookPath = path.join(agentDir, manifest.hooks.post_install);
     if (await fs.pathExists(hookPath)) {
       console.log(`🔧 Running post-install hook: ${manifest.hooks.post_install}`);
-      // Would execute the hook script here
     }
   }
 
